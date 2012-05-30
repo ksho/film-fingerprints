@@ -38,16 +38,16 @@ reader.open("/home/karlshouler/Desktop/how.mkv", pf.TS_VIDEO_PIL)
 video_track = reader.get_tracks()[0]
 fps = video_track.get_fps()
 duration = reader.duration_time()
-num_frames = math.floor(fps * duration) - 10
+num_frames = math.floor(fps * duration) - 100
 print 'fps', fps, duration, num_frames
 
 get_frame_size(video_track)
 
 #num_frames = 10000
 
-#video_track.seek_to_frame(30000)
-#num_frames = num_frames - 30000
-#print num_frames
+video_track.seek_to_frame(100)
+num_frames = num_frames - 100
+print num_frames
 
 composite = Image.new('RGB', (num_frames, FRAME_SIZE['y']), (255, 255, 255))
 video_track.prepare_to_read_ahead()
