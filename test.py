@@ -2,22 +2,27 @@ import pyffmpeg as pf
 from PIL import Image
 
 FRAME_SIZE = {}
+bars = []
+NEW = Image.new('RGB',(100, 720),(0,0,0))
 
 def get_bar(f, i):
     size = f.size
     x = FRAME_SIZE['x'] / 2
     y = FRAME_SIZE['y']
-    c = f.crop((x, 0, x + 1, y))
-    c.save('meow.png')
-    return c
+    f = f.crop((x, 0, x + 1, y))
+    #bars.append(f)
+    NEW.paste(f, (i-1,0))
+    #f.save('hey.png')
+    #return c
 
 
-def build_composite(bars):
+def build_composite():
     num_bars = len(bars)
     print 'num_bars', num_bars, FRAME_SIZE
     composite = Image.new('RGB',(num_bars, FRAME_SIZE['y']),(255,255,255))
     for k in xrange(0, num_bars):
         composite.paste(bars[k], (k,0))
+#    composite = composite.resize((composite.size[0], 70))
     return composite
 
 
@@ -45,21 +50,23 @@ print 'fps', fps, duration, num_frames
 
 frame_size = get_frame_size(tv)
 
-bars = []
+
 i = 1
 
 while i < 100:
     try:
         f = tv.get_next_frame()
-        bar = get_bar(f, i)
-        bars.append(bar)
+        get_bar(f, i)
+        #bars.append(bar)
 
         i = i + 1
-        if i % 20 is 0:
-        	print i, f, tv.get_current_frame_pts(), tv.get_current_frame_frameno()
+        if i % 1 is 0:
+            print i, f, tv.get_current_frame_pts(), tv.get_current_frame_frameno()
     except:
         print 'lalala'
         break
+
+NEW.save('1111.png')
 
 # print i
 # tv.seek_to_frame(100000)
@@ -67,9 +74,9 @@ while i < 100:
 
 # frame = tv.get_current_frame()[2]
 
-composite_image = build_composite(bars)
+#composite_image = build_composite()
 
-composite_image.save('lala3.png')
+#composite_image.save('lala4.png')
 
 
 
