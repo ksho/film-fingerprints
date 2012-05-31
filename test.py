@@ -35,7 +35,7 @@ def do_the_stuff(video_track, start, end, tnum):
     print 'start', start, end
     num_frames = end - start
     video_track.seek_to_frame(start)
-    composite = Image.new('RGB', (num_frames, FRAME_SIZE['y']), (255, 255, 255))
+    composite = Image.new('RGB', (num_frames/10, FRAME_SIZE['y']), (255, 255, 255))
     video_track.prepare_to_read_ahead()
 
     i = 0
@@ -43,14 +43,18 @@ def do_the_stuff(video_track, start, end, tnum):
     bar = get_bar_from_frame(frame, i)
     composite.paste(bar, (i, 0))
 
-    i += 1
+    i += 10
     while i < num_frames:
-        frame = video_track.get_next_frame()
-        bar = get_bar_from_frame(frame, i)
-        composite.paste(bar, (i, 0))
-        i += 1
-        if i % 1000 is 0:
-            print tnum, i, frame, video_track.get_current_frame_pts()
+        try:
+            video_track.seek_to_frame(i)
+            frame = video_track.get_current_frame()[2]
+            bar = get_bar_from_frame(frame, i)
+            composite.paste(bar, (i, 0))
+            i += 10
+            if i % 100 is 0:
+                print tnum, i, frame, video_track.get_current_frame_pts()
+        except:
+            break
     print 'stop'
     q.put(composite)#composite
 
@@ -74,7 +78,7 @@ print 'fps', fps, duration, num_frames
 
 get_frame_size(video_track)
 
-num_frames = 10000
+#num_frames = 10000
 
 
 video_track.seek_to_frame(100)
