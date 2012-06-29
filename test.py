@@ -14,8 +14,8 @@ TODO:
 
 FACTOR = 10
 FRAME_SIZE = {}
-VIDEO_LOC = "/home/karlshouler/Desktop/how.mkv"
-VIDEO_NAME = "how"
+VIDEO_LOC = "/home/karlshouler/Desktop/walk.mkv"
+VIDEO_NAME = "walk"
 NUM_PROCESSES = 2
 
 def get_bar_from_frame(f, i):
@@ -35,38 +35,38 @@ def get_frame_size(video_track):
     print FRAME_SIZE
 
 
-def do_the_stuff(vt, start, end, tnum):
+def do_the_stuff(o):
     
-    num_frames = int(end - start)
-    print 'start', tnum, start, end, num_frames
-    vt.seek_to_frame(start)
-    print 'seek complete', tnum
+    num_frames = int(o['end'] - o['start'])
+    print 'start', o['half'], o['start'], o['end'], num_frames
+    o['vt'].seek_to_frame(o['start'])
+    print 'seek complete', o['half']
     composite = Image.new('RGB', (num_frames/FACTOR, FRAME_SIZE['y']), (255, 255, 255))
-    vt.prepare_to_read_ahead()
+    o['vt'].prepare_to_read_ahead()
 
     i = 0
-    frame = vt.get_current_frame()[2]
+    frame = o['vt'].get_current_frame()[2]
     bar = get_bar_from_frame(frame, i)
     composite.paste(bar, (i/FACTOR, 0))
 
     i += 1
     while i < num_frames:
         try:
-            frame = vt.get_next_frame()
+            frame = o['vt'].get_next_frame()
             if i % FACTOR is 0:
                 bar = get_bar_from_frame(frame, i)
                 composite.paste(bar, (i/FACTOR, 0))
             i += 1
             if i % 100 is 0:
-                print tnum, i, frame, vt.get_current_frame_pts(), vt.get_current_frame_frameno()
+                print o['half'], i, frame, o['vt'].get_current_frame_pts(), o['vt'].get_current_frame_frameno()
             if i % 5000 is 0:
-                composite.save(VIDEO_NAME + 'part' + str(tnum) + '.png')
+                composite.save(VIDEO_NAME + 'part' + str(o['half']) + '.png')
         except:
             break
     print 'stop'
     image_str = composite.tostring()
-    q.put({'half': tnum, 'str': image_str, 'size': composite.size, 'mode': composite.mode})
-    composite.save(VIDEO_NAME + 'part' + str(tnum) + '.png')
+    q.put({'half': o['half'], 'str': image_str, 'size': composite.size, 'mode': composite.mode})
+    composite.save(VIDEO_NAME + 'part' + str(o['half']) + '.png')
 
 
 ########################
@@ -75,38 +75,43 @@ def do_the_stuff(vt, start, end, tnum):
 q = Queue()
 
 readers = []
-# Create reader object
-reader = pf.FFMpegReader()
-reader2= pf.FFMpegReader()
 
-# Open an audio-video file
-reader.open(VIDEO_LOC, pf.TS_VIDEO_PIL)
-reader2.open(VIDEO_LOC, pf.TS_VIDEO_PIL)
+for i in range(NUM_PROCESSES):
+    # Create reader object
+    o = {}
+    o['half'] = i
+    o['reader'] = pf.FFMpegReader()
 
+    # Open an audio-video file
+    o['reader'].open(VIDEO_LOC, pf.TS_VIDEO_PIL)
 
+    o['vt'] = o['reader'].get_tracks()[0]
+    readers.append(o)
 
-video_track = reader.get_tracks()[0]
-video_track2 = reader2.get_tracks()[0]
-fps = video_track.get_fps()
-duration = reader.duration_time()
-num_frames = math.floor(fps * duration) - 100
-print 'fps', fps, duration, num_frames
+r = readers
 
-get_frame_size(video_track)
+get_frame_size(r[0]['vt'])
+fps = r[0]['vt'].get_fps()
+duration = r[0]['reader'].duration_time()
+total_num_frames = math.floor(fps * duration) - 100
 
-num_frames = 2000
+print 'fps', fps, duration, total_num_frames
 
-video_track.seek_to_frame(100)
-num_frames = num_frames - 100
-print num_frames
+total_num_frames = 5000
 
-start1 = 0
-start2 = int(num_frames / 2);
-end1 = start2 - 1
-end2 = num_frames
+r[0]['vt'].seek_to_frame(100)
+total_num_frames = total_num_frames - 100
+print total_num_frames
 
-p1 = Process(target=do_the_stuff, args=[video_track,start1,end1,1])
-p2 = Process(target=do_the_stuff, args=[video_track2,start2,end2,2])
+r[0]['start'] = 0
+r[1]['start'] = int(total_num_frames / 2);
+r[0]['end'] = r[1]['start'] - 1
+r[1]['end'] = total_num_frames
+
+print r[0]
+
+p1 = Process(target=do_the_stuff, args=(r[0],))
+p2 = Process(target=do_the_stuff, args=(r[1],))
 p1.start()
 p2.start()
 
@@ -121,18 +126,18 @@ p2.join()
 
 for h in halves:
     print 'lala'
-    if h['half'] is 1:
+    if h['half'] is 0:
         first = Image.fromstring(h['mode'], h['size'], h['str'])
         print 's1', first.size
-    elif h['half'] is 2:
+    elif h['half'] is 1:
         second = Image.fromstring(h['mode'], h['size'], h['str'])
         print 's2', second.size
 
 delta = first.size[0] - second.size[0]
 
 
-composite = Image.new('RGB', (num_frames/FACTOR + delta, FRAME_SIZE['y']), (255, 255, 255))
+composite = Image.new('RGB', (total_num_frames/FACTOR + delta, FRAME_SIZE['y']), (255, 255, 255))
 composite.paste(first, (0, 0))
-composite.paste(second, (num_frames/FACTOR/2 + delta, 0))
+composite.paste(second, (total_num_frames/FACTOR/2 + delta, 0))
 
 composite.save('sup.png')
