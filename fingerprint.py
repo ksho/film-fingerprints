@@ -77,10 +77,6 @@ q = Queue()
 
 readers = []
 
-# shutil.copy(VIDEO_LOC, VIDEO_LOC+'copy')
-
-# sys.exit()
-
 for i in range(NUM_PROCESSES):
     # Create reader object
     o = {}
@@ -121,7 +117,7 @@ r[1]['end'] = total_num_frames
 
 print r[0]
 
-pool = Pool(processes=2)
+# pool = Pool(processes=2)
 # p1 = pool.apply_async(do_the_stuff, [r[0],v0,])
 # print p1.get()
 # p2 = pool.apply_async(do_the_stuff, [r[1],v1,])
