@@ -4,7 +4,9 @@ import pyffmpeg as pf
 from PIL import Image
 import math
 import threading
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, Pool
+import shutil
+import sys
 
 
 """
@@ -14,8 +16,8 @@ TODO:
 
 FACTOR = 10
 FRAME_SIZE = {}
-VIDEO_LOC = "/home/karlshouler/Desktop/walk.mkv"
-VIDEO_NAME = "walk"
+VIDEO_LOC = "/home/karlshouler/Desktop/eternal.mkv"
+VIDEO_NAME = "eternal"
 NUM_PROCESSES = 2
 
 def get_bar_from_frame(f, i):
@@ -35,30 +37,29 @@ def get_frame_size(video_track):
     print FRAME_SIZE
 
 
-def do_the_stuff(o):
-    
+def do_the_stuff(o, vt):
     num_frames = int(o['end'] - o['start'])
     print 'start', o['half'], o['start'], o['end'], num_frames
-    o['vt'].seek_to_frame(o['start'])
+    vt.seek_to_frame(o['start'])
     print 'seek complete', o['half']
     composite = Image.new('RGB', (num_frames/FACTOR, FRAME_SIZE['y']), (255, 255, 255))
-    o['vt'].prepare_to_read_ahead()
+    # o['vt'].prepare_to_read_ahead()
 
     i = 0
-    frame = o['vt'].get_current_frame()[2]
+    frame = vt.get_current_frame()[2]
     bar = get_bar_from_frame(frame, i)
     composite.paste(bar, (i/FACTOR, 0))
 
     i += 1
     while i < num_frames:
         try:
-            frame = o['vt'].get_next_frame()
+            frame = vt.get_next_frame()
             if i % FACTOR is 0:
                 bar = get_bar_from_frame(frame, i)
                 composite.paste(bar, (i/FACTOR, 0))
             i += 1
-            if i % 100 is 0:
-                print o['half'], i, frame, o['vt'].get_current_frame_pts(), o['vt'].get_current_frame_frameno()
+            if i % 500 is 0:
+                print o['half'], i, frame, vt.get_current_frame_pts(), vt.get_current_frame_frameno()
             if i % 5000 is 0:
                 composite.save(VIDEO_NAME + 'part' + str(o['half']) + '.png')
         except:
@@ -76,6 +77,10 @@ q = Queue()
 
 readers = []
 
+# shutil.copy(VIDEO_LOC, VIDEO_LOC+'copy')
+
+# sys.exit()
+
 for i in range(NUM_PROCESSES):
     # Create reader object
     o = {}
@@ -90,16 +95,22 @@ for i in range(NUM_PROCESSES):
 
 r = readers
 
-get_frame_size(r[0]['vt'])
-fps = r[0]['vt'].get_fps()
+v0 = r[0]['vt']
+v1 = r[1]['vt']
+
+print 'r0', str(r[0])
+print 'r1', str(r[1])
+
+get_frame_size(v0)
+fps = v0.get_fps()
 duration = r[0]['reader'].duration_time()
 total_num_frames = math.floor(fps * duration) - 100
 
 print 'fps', fps, duration, total_num_frames
 
-total_num_frames = 5000
+# total_num_frames = 2000
 
-r[0]['vt'].seek_to_frame(100)
+v0.seek_to_frame(100)
 total_num_frames = total_num_frames - 100
 print total_num_frames
 
@@ -110,8 +121,13 @@ r[1]['end'] = total_num_frames
 
 print r[0]
 
-p1 = Process(target=do_the_stuff, args=(r[0],))
-p2 = Process(target=do_the_stuff, args=(r[1],))
+pool = Pool(processes=2)
+# p1 = pool.apply_async(do_the_stuff, [r[0],v0,])
+# print p1.get()
+# p2 = pool.apply_async(do_the_stuff, [r[1],v1,])
+
+p1 = Process(target=do_the_stuff, args=(r[0],v0))
+p2 = Process(target=do_the_stuff, args=(r[1],v1))
 p1.start()
 p2.start()
 
